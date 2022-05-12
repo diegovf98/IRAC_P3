@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset ="utf-8"/>
+		<title>Práctica 3</title>
+		<style>
+			video{
+				margin-left: 5%;
+				width:640px;
+				height:360px;}
+		</style>
+	</head>
+	<body>
+
+		<h1 style= "text-align: center;">Práctica 3 IRAC</h1>
+		<h2 style= "text-align: center;">Diego de Vega, Santiago Muñoz-Chápuli, Daniel Sánchez, Aitor Martín-Romo</h2>
+
+		<script type= "text/javascript" src= "http://cdn.dashjs.org/latest/dash.all.min.js"></script>
+		<script type= "text/javascript" src= "https://cdn.jsdelivr.net/npm/chart.js"></script>
+		<script type= "text/javascript" src= "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.3/moment.min.js"></script>
+
+
+
+
+		<!--<video class="dashjs-player" autoplay controls preload="auto">
+			<source src="https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd" type="application/dash+xml"/>
+		</video>-->
+
+
+		<script>
+			document.addEventListener("DOMContentLoaded", function () {
+				init();
+				});
+				function init(){
+					const protData = {
+						"org.w3.clearkey": {
+						"clearkeys": {
+						 "oW5AK5BW43HzbTSKpiu3SQ": "hyN9IKGfWKdAwFaE5pm0qg"
+							}
+						}
+					};
+					var video,
+					player,
+					mpd_url = "IRac/output/stream.mpd";
+					video = document.querySelector("video");
+					player = dashjs.MediaPlayer().create();
+					//player.setProtectionData(protData);
+					player.initialize(video, mpd_url, true);
+					player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], function() {
+						clearInterval(eventPoller);
+					});
+
+					var MAX_LENGTH = 120;
+
+					const data = {
+						datasets: [{
+							label: 'Buffer Level',
+							yAxisID: 'BufferY',
+							backgroundColor: 'rgb(255, 0, 0, 0.5)',
+							borderColor: 'rgb(0, 0, 0, 0)',
+							tension: 0.2,
+							fill: true
+						},
+
+						{
+							label: 'Bitrate',
+							yAxisID: 'BitrateY',
+							backgroundColor: 'rgb(0, 255, 255, 0.5)',
+							borderColor: 'rgb(0, 0, 0, 0)',
+							tension: 0.2,
+							fill: true
+						}]
+					};
+
+					const config = {
+					  	type: 'line',
+					  	data,
+					  	options: {
+					  	// 	scales: {
+					  	// 		bufferAxis: {
+					  	// 			id: 'BufferY',
+					  	// 			type: 'linear',
+					  	// 			position: 'left',
+					  	// 			scaleLabel: {
+					  	// 				display: true,
+					  	// 				labelString: 'Buffer Level (s)'
+					  	// 			}
+					  	// 		},
+
+					  	// 		bitrateAxis: {
+					  	// 			id: 'BitrateY',
+					  	// 			type: 'linear',
+					  	// 			position: 'right',
+					  	// 			scaleLabel: {
+					  	// 				display: true,
+					  	// 				labelString: 'Bitrate (kbps)'
+					  	// 			}
+					  	// 	}
+					  	// }
+					  }
+					};
+				myChart = new Chart(document.getElementById('myChart'), config);
+					// let myChart = new Chart(document.getElementById('myChart'), {
+					//   type: 'line',
+					//   data,
+					//   options: {
+					//     scales: {
+					//       myScale: {
+					//         type: 'linear',
+					//         position: 'right', // `axis` is determined by the position as `'y'`
+					//       }
+					//     }
+					//   }
+					// });
+
+
+
+					if(myChart.data.labels.length > MAX_LENGTH){
+						myChart.data.labels.shift();
+						myChart.data.datasets[0].data.shift();
+						myChart.data.datasets[1].data.shift();
+					}
+
+					
+
+
+					var eventPoller = setInterval(function() {
+						var streamInfo = player.getActiveStream().getStreamInfo();
+						var dashMetrics = player.getDashMetrics();
+						var dashAdapter = player.getDashAdapter();
+						 if (dashMetrics && streamInfo) {
+							 const periodIdx = streamInfo.index;
+							 var repSwitch = dashMetrics.getCurrentRepresentationSwitch('video', true);
+							 var bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
+							 var bitrate = repSwitch ? Math.round(dashAdapter.getBandwidthForRepresentation(repSwitch.to, periodIdx) / 1000) : NaN;
+							 document.getElementById('buffer').innerText = bufferLevel + " secs";
+							 document.getElementById('bitrate').innerText = bitrate + " Kbps";
+							 document.getElementById('representation').innerText = repSwitch.to;
+
+							var label = moment().format('LTS');
+							myChart.data.labels.push(label);	
+							myChart.data.datasets[0].data.push(bufferLevel);
+							myChart.data.datasets[1].data.push(bitrate);
+							myChart.update();				 
+						 }
+					}, 500);
+					
+				}
+		</script>
+		<div class="code">
+			 <p>Video Bitrate: <span id="bitrate"></span> kbps</p>
+			 <p>Video Buffer: <span id="buffer"></span> seconds</p>
+			 <p>Video Representation: <span id="representation"></span></p>
+		</div>		
+		<div class="code">
+			<video class="dashjs-player" autoplay controls preload="auto" muted>
+				<!-- <source src="IRac/output/stream.mpd" type="application/dash+xml"/> -->
+			</video>
+		</div>
+		<div class = "chart-container" style= "position:relative;width:700px;height:700px">
+			<canvas id="myChart" width="400" height="400"></canvas>
+		</div>
+
+		<!-- <div>
+			<script>
+
+    			const myChart = new Chart(ctx);
+			</script>
+		</div> -->
+	</body>
+</html>
